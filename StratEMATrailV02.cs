@@ -158,7 +158,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                 // Strategy parameter default values
                 TrailingStopPoints = 20;                           // Base trailing stop distance in points
                 AtrMultiplier = 2.5;                              // Multiplier for ATR-based stop distance
-                ProfitTriggerPoints = 10;                          // Points needed to activate breakeven protection (reduced for faster trailing)
+                ProfitTriggerPoints = 9;                          // Points needed to activate breakeven protection (reduced for faster trailing)
                 ProgressiveTighteningRate = 0.25;                  // Rate of stop tightening as profit increases (faster acceleration)
                 Quantity = 1;                                      // Number of contracts to trade
                 EmaPeriod1 = 6;                                   // Fast EMA period
