@@ -156,7 +156,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                 BarsRequiredToTrade = 50;                          // Minimum bars needed before trading
 
                 // Strategy parameter default values
-                TrailingStopPoints = 33;                           // Base trailing stop distance in points
+                TrailingStopPoints = 44;                           // Base trailing stop distance in points
                 AtrMultiplier = 2.5;                              // Multiplier for ATR-based stop distance
                 ProfitTriggerPoints = 9;                          // Points needed to activate breakeven protection (reduced for faster trailing)
                 ProgressiveTighteningRate = 0.25;                  // Rate of stop tightening as profit increases (faster acceleration)
