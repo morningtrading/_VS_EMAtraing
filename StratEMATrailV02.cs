@@ -154,11 +154,15 @@ namespace NinjaTrader.NinjaScript.Strategies
                 RealtimeErrorHandling = RealtimeErrorHandling.StopCancelClose; // Stop strategy on errors
                 StopTargetHandling = StopTargetHandling.PerEntryExecution; // Handle stops per entry execution
                 BarsRequiredToTrade = 50;                          // Minimum bars needed before trading
-                
+
                 // Strategy parameter default values
+<<<<<<< HEAD
                 TrailingStopPoints = 40;                           // Base trailing stop distance in points
+=======
+                TrailingStopPoints = 44;                           // Base trailing stop distance in points
+>>>>>>> 4d4e0001c17ebe83c61b57c0b22f286c1f060e70
                 AtrMultiplier = 2.5;                              // Multiplier for ATR-based stop distance
-                ProfitTriggerPoints = 10;                          // Points needed to activate breakeven protection (reduced for faster trailing)
+                ProfitTriggerPoints = 9;                          // Points needed to activate breakeven protection (reduced for faster trailing)
                 ProgressiveTighteningRate = 0.25;                  // Rate of stop tightening as profit increases (faster acceleration)
                 Quantity = 1;                                      // Number of contracts to trade
                 EmaPeriod1 = 6;                                   // Fast EMA period
