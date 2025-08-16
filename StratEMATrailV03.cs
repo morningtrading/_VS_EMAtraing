@@ -28,16 +28,19 @@ using NinjaTrader.NinjaScript.DrawingTools;
 namespace NinjaTrader.NinjaScript.Strategies
 {
     // Enumeration defining the available trading directions for the strategy
-    public enum TradingDirection
+    public enum TradingDirection1234
     {
         Both,       // Allow both long and short trades
         LongOnly,   // Only allow long (buy) trades
         ShortOnly   // Only allow short (sell) trades
     }
     
-    // Main strategy class StratEMATrailV02 from NinjaTrader's Strategy base class
-    public class StratEMATrailV02 : Strategy
+    // Main strategy class StratEMATrailV03 from NinjaTrader's Strategy base class
+    public class StratEMATrailV03 : Strategy
+
     {
+		
+
         // Private indicator instances - these will hold our technical indicators
         private EMA FastEMA;   // Fast EMA indicator (9 periods)
         private EMA SlowEMA;  // Slow EMA indicator (41 periods)
@@ -130,6 +133,12 @@ namespace NinjaTrader.NinjaScript.Strategies
         private DateTime tradeEntryTime = DateTime.MinValue;     // Store actual entry time
         private DateTime tradeExitTime = DateTime.MinValue;      // Store actual exit time
         
+        // User parameter: minimum price movement (in ticks) before trailing stop updates
+        [NinjaScriptProperty]
+        [Range(1, int.MaxValue)]
+        [Display(Name = "Trailing Update Step (Ticks)", Description = "Minimum price movement (in ticks) before trailing stop updates", Order = 16, GroupName = "Parameters")]
+        public int TrailingUpdateStepTicks { get; set; } = 4; // Default: 4 ticks (1 point for NQ/ES)
+        
         // Override method called when strategy state changes (SetDefaults, Configure, Active, etc.)
         protected override void OnStateChange()
         {
@@ -138,7 +147,7 @@ namespace NinjaTrader.NinjaScript.Strategies
             {
                 // Basic strategy information
                 Description = @"NQ Strategy with configurable EMA crossover and trailing stop"; // Strategy description
-                Name = "StratEMATrailV02";                          // Strategy name as it appears in NinjaTrader
+                Name = "StratEMATrailV03";                          // Strategy name as it appears in NinjaTrader
                 Calculate = Calculate.OnBarClose;                   // Calculate on bar close for reliable signals
                 EntriesPerDirection = 1;                           // Maximum 1 position per direction (long/short)
                 EntryHandling = EntryHandling.AllEntries;          // Allow all entry orders to be processed
@@ -154,29 +163,35 @@ namespace NinjaTrader.NinjaScript.Strategies
                 RealtimeErrorHandling = RealtimeErrorHandling.StopCancelClose; // Stop strategy on errors
                 StopTargetHandling = StopTargetHandling.PerEntryExecution; // Handle stops per entry execution
                 BarsRequiredToTrade = 50;                          // Minimum bars needed before trading
-                
+
                 // Strategy parameter default values
-                TrailingStopPoints = 40;                           // Base trailing stop distance in points
+                TrailingStopPoints = 35;                           // Base trailing stop distance in points
                 AtrMultiplier = 2.5;                              // Multiplier for ATR-based stop distance
-                ProfitTriggerPoints = 10;                          // Points needed to activate breakeven protection (reduced for faster trailing)
-                ProgressiveTighteningRate = 0.25;                  // Rate of stop tightening as profit increases (faster acceleration)
+                ProfitTriggerPoints = 20;                          // Points needed to activate breakeven protection (reduced for faster trailing)
+                ProgressiveTighteningRate = 0.1;                  // Rate of stop tightening as profit increases (faster acceleration)
                 Quantity = 1;                                      // Number of contracts to trade
                 EmaPeriod1 = 6;                                   // Fast EMA period
                 EmaPeriod2 = 51;                                  // Slow EMA period
-                
+
                 // Time filter settings (New York timezone)
                 StartTime = DateTime.Parse("08:30", System.Globalization.CultureInfo.InvariantCulture); // Trading start time
                 EndTime = DateTime.Parse("15:25", System.Globalization.CultureInfo.InvariantCulture);   // Trading end time (FIXED TYPO)
                 UseTimeFilter = true;                             // Enable time-based trading filter
-                
+
                 // Trading direction default setting
-                //Direction = TradingDirection.LongOnly;  // long lonly for NQ strategy (put Both for both directions)
-                Direction = TradingDirection.Both; // Uncomment to allow both long and short trades  
+                //Direction = TradingDirection1234.LongOnly;  // long lonly for NQ strategy (put Both for both directions)
+                Direction = TradingDirection1234.Both; // Uncomment to allow both long and short trades  
                 // Allow both long and short trades
 
                 // Visual display default settings
                 StopLossColor = Brushes.Cyan;                     // Cyan color for stop loss line (more visible)
                 LineThickness = 3;                                // Stop loss line thickness
+
+                // Dashboard display default
+                ShowDashboards = true;
+                
+                // Max ATR distance default
+                MaxAtrDistance = 1.5 * TrailingStopPoints; // Default: 1.5x trailing stop points
             }
             // State.Configure: Initialize indicators and configure strategy
             else if (State == State.Configure)
@@ -292,29 +307,19 @@ namespace NinjaTrader.NinjaScript.Strategies
                 // Debug: Print EMA values and crossover status only when crossover occurs
                 if (bullishCrossover || bearishCrossover)
                 {
-                    Print($"CROSSOVER DETECTED - Bar {CurrentBar}: FastEMA={FastEMA[0]:F2}, SlowEMA={SlowEMA[0]:F2}, Bull={bullishCrossover}, Bear={bearishCrossover}, TradingAllowed={tradingAllowed}");
-                    
+                    //Print($"CROSSOVER DETECTED - Bar {CurrentBar}: FastEMA={FastEMA[0]:F2}, SlowEMA={SlowEMA[0]:F2}, Bull={bullishCrossover}, Bear={bearishCrossover}, TradingAllowed={tradingAllowed}");
                     // Draw crossover signal icons on chart - default colors for signal only
                     if (bullishCrossover)
                     {
                         string crossoverIconName = $"BullCrossover_{Time[0].Ticks}";
-                        string crossoverTextName = $"BullText_{Time[0].Ticks}";
-                        // Draw arrow closer to price action with autoscale enabled
-                        Draw.ArrowUp(this, crossoverIconName, true, 0, Low[0] - (3 * TickSize), Brushes.Blue);
-                        // Draw text label
-                        Draw.Text(this, crossoverTextName, "BULL\nCROSS", 0, Low[0] - (8 * TickSize), Brushes.Blue);
-                        Print($"Drawing Bull Crossover Arrow at bar {CurrentBar}, time {Time[0]}, price {Low[0] - (3 * TickSize):F2}");
+                  //      Draw.ArrowUp(this, crossoverIconName, true, 0, Low[0] - (3 * TickSize), Brushes.Blue);
+                    //    Print($"Drawing Bull Crossover Arrow at bar {CurrentBar}, time {Time[0]}, price {Low[0] - (3 * TickSize):F2}");
                     }
-                    
                     if (bearishCrossover)
                     {
                         string crossoverIconName = $"BearCrossover_{Time[0].Ticks}";
-                        string crossoverTextName = $"BearText_{Time[0].Ticks}";
-                        // Draw arrow closer to price action with autoscale enabled
-                        Draw.ArrowDown(this, crossoverIconName, true, 0, High[0] + (3 * TickSize), Brushes.Purple);
-                        // Draw text label
-                        Draw.Text(this, crossoverTextName, "BEAR\nCROSS", 0, High[0] + (8 * TickSize), Brushes.Purple);
-                        Print($"Drawing Bear Crossover Arrow at bar {CurrentBar}, time {Time[0]}, price {High[0] + (3 * TickSize):F2}");
+                     //   Draw.ArrowDown(this, crossoverIconName, true, 0, High[0] + (3 * TickSize), Brushes.Purple);
+                     //   Print($"Drawing Bear Crossover Arrow at bar {CurrentBar}, time {Time[0]}, price {High[0] + (3 * TickSize):F2}");
                     }
                 }
                 
@@ -350,7 +355,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     {
                         canEnterLong = false;
                     }
-                    else if (Direction == TradingDirection.ShortOnly)
+                    else if (Direction == TradingDirection1234.ShortOnly)
                     {
                         canEnterLong = false;
                     }
@@ -373,21 +378,13 @@ namespace NinjaTrader.NinjaScript.Strategies
                         breakevenActivated = false;                  // Reset breakeven protection flag
                         DrawStopLossLine(longStopLoss);              // Draw stop loss line on chart
                         
-                        // Remove the trade display icons and text
-                        /*
-                        // Change crossover icon to bright green to indicate trade taken
-                        string crossoverIconName = $"BullCrossover_{Time[0].Ticks}";
-                        string crossoverTextName = $"BullText_{Time[0].Ticks}";
-                        Draw.ArrowUp(this, crossoverIconName, true, 0, Low[0] - (3 * TickSize), Brushes.LimeGreen);
-                        Draw.Text(this, crossoverTextName, "BULL\nTRADE", 0, Low[0] - (15 * TickSize), Brushes.LimeGreen);
-                        Print($"Updated Bull Crossover to TRADE - Green arrow at {Low[0] - (3 * TickSize):F2}");
-                        */
+                        // ...existing code...
                         
                         Print($"LONG ENTRY: Bullish crossover at {Close[0]:F2} - Updated our position tracking to LONG");
                         
                         // Draw visual marker for successful entry
                         string entryMarkerName = $"LongEntry_{CurrentBar}";
-                        Draw.TriangleUp(this, entryMarkerName, false, 0, Low[0] - (5 * TickSize), Brushes.Green);
+                       // Draw.TriangleUp(this, entryMarkerName, false, 0, Low[0] - (5 * TickSize), Brushes.Green);
                     }
                 }
                 
@@ -423,7 +420,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     {
                         canEnterShort = false;
                     }
-                    else if (Direction == TradingDirection.LongOnly)
+                    else if (Direction == TradingDirection1234.LongOnly)
                     {
                         canEnterShort = false;
                     }
@@ -452,7 +449,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                         
                         // Draw visual marker for successful entry
                         string entryMarkerName = $"ShortEntry_{CurrentBar}";
-                        Draw.TriangleDown(this, entryMarkerName, false, 0, High[0] + (5 * TickSize), Brushes.Red);
+                        //Draw.TriangleDown(this, entryMarkerName, false, 0, High[0] + (5 * TickSize), Brushes.Red);
                     }
                 }
                 
@@ -516,7 +513,20 @@ namespace NinjaTrader.NinjaScript.Strategies
             try // Wrap in try-catch for error handling
             {
                 // Exit if no valid entry price recorded
-                if (entryPrice <= 0) return;
+                if (entryPrice <= 0) {
+                    RemoveDrawObject("BreakEvenTriggerLong");
+                    return;
+                }
+                // Draw orange dashed line for break-even trigger level if not yet triggered
+                double breakEvenTriggerLevel = entryPrice + (ProfitTriggerPoints * TickSize);
+                if (!breakevenActivated)
+                {
+                    Draw.HorizontalLine(this, "BreakEvenTriggerLong", breakEvenTriggerLevel, Brushes.Orange, DashStyleHelper.Dash, 2);
+                }
+                else
+                {
+                    RemoveDrawObject("BreakEvenTriggerLong");
+                }
                 
                 // Calculate current profit in points (price difference divided by tick size)
                 double currentProfitPoints = (Close[0] - entryPrice) / TickSize;
@@ -531,6 +541,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     breakevenActivated = true;                    // Mark breakeven protection as active
                     trailingActivated = true;                     // Mark trailing stop as active
                     DrawStopLossLine(longStopLoss);              // Draw updated stop line on chart
+                    RemoveDrawObject("BreakEvenTriggerLong");   // Remove break even trigger line
                     Print($"Long position: Breakeven protection activated at {longStopLoss:F2}"); // Log activation
                     return;                                       // Exit early to allow breakeven to take effect
                 }
@@ -543,20 +554,25 @@ namespace NinjaTrader.NinjaScript.Strategies
                 if (currentProfitPoints > ProfitTriggerPoints)   // Only tighten after breakeven trigger
                 {
                     // Calculate how many profit levels above trigger point we are
-                    double profitLevels = (currentProfitPoints - ProfitTriggerPoints) / 5; // Every 5 points = 1 level (faster acceleration)
+                    double profitLevels = (currentProfitPoints - ProfitTriggerPoints) / 1; // Every 1 point = 1 level (faster acceleration)
                     // Calculate reduction amount based on profit levels and tightening rate
                     double reduction = profitLevels * ProgressiveTighteningRate * baseDistance;
                     // Apply reduction but maintain minimum distance (20% of original for more aggressive tightening)
-                    baseDistance = Math.Max(baseDistance - reduction, baseDistance * 0.2);
+                    baseDistance = Math.Max(baseDistance - reduction, baseDistance * 0.1);
                 }
                 
                 // ATR-based dynamic distance calculation for volatility adaptation
                 double atrValue = atr[0];                         // Get current ATR value
-                double atrDistance = AtrMultiplier * atrValue / TickSize; // Convert ATR to points using multiplier
+                double atrDistance = Math.Min(AtrMultiplier * atrValue / TickSize, MaxAtrDistance); // Convert ATR to points using multiplier, cap at MaxAtrDistance
                 double trailingDistance = Math.Max(baseDistance, atrDistance); // Use larger of progressive or ATR distance
                 
                 // Calculate new stop level based on current price and trailing distance
                 double newStopLevel = Close[0] - (trailingDistance * TickSize);
+                
+                // Only update trailing stop if price has moved by at least TrailingUpdateStepTicks from lastTrailingUpdatePriceLong
+                double priceMoveSinceLastUpdate = Math.Abs(Close[0] - lastTrailingUpdatePriceLong) / TickSize;
+                if (lastTrailingUpdatePriceLong != 0 && priceMoveSinceLastUpdate < TrailingUpdateStepTicks)
+                    return;
                 
                 // Update stop only if new level is higher (more favorable) or if trailing not yet activated
                 if (newStopLevel > longStopLoss || !trailingActivated)
@@ -564,6 +580,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     longStopLoss = newStopLevel;                  // Update stop loss level
                     trailingActivated = true;                     // Mark trailing as active
                     DrawStopLossLine(longStopLoss);              // Draw updated stop line
+                    lastTrailingUpdatePriceLong = Close[0]; // Update reference price
                 }
                 
                 // Check if stop loss has been hit and exit position
@@ -588,81 +605,97 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
         
         // Advanced trailing stop logic for short positions with multiple features
-        private void ProcessShortTrailingStop()
+    // Advanced trailing stop logic for short positions with multiple features
+    private void ProcessShortTrailingStop()
+    {
+        try // Wrap in try-catch for error handling
         {
-            try // Wrap in try-catch for error handling
-            {
-                // Exit if no valid entry price recorded
-                if (entryPrice <= 0) return;
-                
-                // Calculate current profit in points (entry price minus current price for shorts)
-                double currentProfitPoints = (entryPrice - Close[0]) / TickSize;
-                
-                // Immediate trailing option - start trailing right away (more aggressive)
-                // Comment out the breakeven section below if you want immediate trailing
-                
-                // Breakeven protection - move stop to entry price once profitable enough
-                if (!breakevenActivated && currentProfitPoints >= ProfitTriggerPoints)
-                {
-                    shortStopLoss = entryPrice - (2 * TickSize);  // Set stop slightly below entry price
-                    breakevenActivated = true;                    // Mark breakeven protection as active
-                    trailingActivated = true;                     // Mark trailing stop as active
-                    DrawStopLossLine(shortStopLoss);             // Draw updated stop line on chart
-                    Print($"Short position: Breakeven protection activated at {shortStopLoss:F2}"); // Log activation
-                    return;                                       // Exit early to allow breakeven to take effect
-                }
-                
-                // Alternative: Immediate trailing (uncomment the lines below and comment out breakeven section above)
-                // trailingActivated = true;  // Start trailing immediately
-                
-                // Progressive tightening - reduce trailing distance as profit increases
-                double baseDistance = TrailingStopPoints;         // Start with base trailing stop distance
-                if (currentProfitPoints > ProfitTriggerPoints)   // Only tighten after breakeven trigger
-                {
-                    // Calculate how many profit levels above trigger point we are
-                    double profitLevels = (currentProfitPoints - ProfitTriggerPoints) / 5; // Every 5 points = 1 level (faster acceleration)
-                    // Calculate reduction amount based on profit levels and tightening rate
-                    double reduction = profitLevels * ProgressiveTighteningRate * baseDistance;
-                    // Apply reduction but maintain minimum distance (20% of original for more aggressive tightening)
-                    baseDistance = Math.Max(baseDistance - reduction, baseDistance * 0.2);
-                }
-                
-                // ATR-based dynamic distance calculation for volatility adaptation
-                double atrValue = atr[0];                         // Get current ATR value
-                double atrDistance = AtrMultiplier * atrValue / TickSize; // Convert ATR to points using multiplier
-                double trailingDistance = Math.Max(baseDistance, atrDistance); // Use larger of progressive or ATR distance
-                
-                // Calculate new stop level based on current price and trailing distance
-                double newStopLevel = Close[0] + (trailingDistance * TickSize);
-                
-                // Update stop only if new level is lower (more favorable) or if trailing not yet activated
-                if (newStopLevel < shortStopLoss || !trailingActivated)
-                {
-                    shortStopLoss = newStopLevel;                 // Update stop loss level
-                    trailingActivated = true;                     // Mark trailing as active
-                    DrawStopLossLine(shortStopLoss);             // Draw updated stop line
-                }
-                
-                // Check if stop loss has been hit and exit position
-                if (High[0] >= shortStopLoss)
-                {
-                    Print($"Short stop hit - Final MFE: ${currentTradeMFE:F2}, MAE: ${currentTradeMAE:F2}");
-                    ExitShort("Short Stop", "Short Entry");      // Exit short position
-                    
-                    // Update our position tracking immediately
-                    ourPositionState = MarketPosition.Flat;
-                    ourPositionQuantity = 0;
-                    lastPositionUpdate = Time[0];
-                    Print($"SHORT STOP HIT: Updated our position tracking to FLAT");
-                    
-                    RemoveStopLossLine();                        // Remove stop line from chart
-                }
+            // Exit if no valid entry price recorded
+            if (entryPrice <= 0) {
+                RemoveDrawObject("BreakEvenTriggerShort");
+                return;
             }
-            catch (Exception ex) // Handle any errors
+            // Draw orange dashed line for break-even trigger level if not yet triggered
+            double breakEvenTriggerLevel = entryPrice - (ProfitTriggerPoints * TickSize);
+            if (!breakevenActivated)
             {
-                Print($"Error in ProcessShortTrailingStop: {ex.Message}"); // Log error
+                Draw.HorizontalLine(this, "BreakEvenTriggerShort", breakEvenTriggerLevel, Brushes.Orange, DashStyleHelper.Dash, 2);
+            }
+            else
+            {
+                RemoveDrawObject("BreakEvenTriggerShort");
+            }
+
+            // Calculate current profit in points (entry price minus current price for shorts)
+            double currentProfitPoints = (entryPrice - Close[0]) / TickSize;
+
+            // Breakeven protection - move stop to entry price once profitable enough
+            if (!breakevenActivated && currentProfitPoints >= ProfitTriggerPoints)
+            {
+                shortStopLoss = entryPrice - (2 * TickSize);  // Set stop slightly below entry price
+                breakevenActivated = true;                    // Mark breakeven protection as active
+                trailingActivated = true;                     // Mark trailing stop as active
+                DrawStopLossLine(shortStopLoss);             // Draw updated stop line on chart
+                RemoveDrawObject("BreakEvenTriggerShort");  // Remove break even trigger line
+                Print($"Short position: Breakeven protection activated at {shortStopLoss:F2}"); // Log activation
+                return;                                       // Exit early to allow breakeven to take effect
+            }
+
+            // Progressive tightening - reduce trailing distance as profit increases
+            double baseDistance = TrailingStopPoints;         // Start with base trailing stop distance
+            if (currentProfitPoints > ProfitTriggerPoints)   // Only tighten after breakeven trigger
+            {
+                // Calculate how many profit levels above trigger point we are
+                double profitLevels = (currentProfitPoints - ProfitTriggerPoints) / 1; // Every 1 point = 1 level (faster acceleration)
+                // Calculate reduction amount based on profit levels and tightening rate
+                double reduction = profitLevels * ProgressiveTighteningRate * baseDistance;
+                // Apply reduction but maintain minimum distance (20% of original for more aggressive tightening)
+                baseDistance = Math.Max(baseDistance - reduction, baseDistance * 0.2);
+            }
+
+            // ATR-based dynamic distance calculation for volatility adaptation
+            double atrValue = atr[0];                         // Get current ATR value
+            double atrDistance = Math.Min(AtrMultiplier * atrValue / TickSize, MaxAtrDistance); // Convert ATR to points using multiplier, cap at MaxAtrDistance
+
+            double trailingDistance = Math.Max(baseDistance, atrDistance); // Use larger of progressive or ATR distance
+
+            // Calculate new stop level based on current price and trailing distance
+            double newStopLevel = Close[0] + (trailingDistance * TickSize);
+
+            // Only update trailing stop if price has moved by at least TrailingUpdateStepTicks from lastTrailingUpdatePriceShort
+            double priceMoveSinceLastUpdate = Math.Abs(Close[0] - lastTrailingUpdatePriceShort) / TickSize;
+            if (lastTrailingUpdatePriceShort != 0 && priceMoveSinceLastUpdate < TrailingUpdateStepTicks)
+                return;
+
+            // Update stop only if new level is lower (more favorable) or if trailing not yet activated
+            if (newStopLevel < shortStopLoss || !trailingActivated)
+            {
+                shortStopLoss = newStopLevel;                 // Update stop loss level
+                trailingActivated = true;                     // Mark trailing as active
+                DrawStopLossLine(shortStopLoss);             // Draw updated stop line
+                lastTrailingUpdatePriceShort = Close[0]; // Update reference price
+            }
+
+            // Check if stop loss has been hit and exit position
+            if (High[0] >= shortStopLoss)
+            {
+                Print($"Short stop hit - Final MFE: ${currentTradeMFE:F2}, MAE: ${currentTradeMAE:F2}");
+                ExitShort("Short Stop", "Short Entry");      // Exit short position
+
+                // Update our position tracking immediately
+                ourPositionState = MarketPosition.Flat;
+                ourPositionQuantity = 0;
+                lastPositionUpdate = Time[0];
+                Print($"SHORT STOP HIT: Updated our position tracking to FLAT");
+
+                RemoveStopLossLine();                        // Remove stop line from chart
             }
         }
+        catch (Exception ex) // Handle any errors
+        {
+            Print($"Error in ProcessShortTrailingStop: {ex.Message}"); // Log error
+        }
+    }
         
         // Method to update Maximum Favorable Excursion (MFE) and Maximum Adverse Excursion (MAE) for the current trade
         private void UpdateMFEMAE()
@@ -678,12 +711,6 @@ namespace NinjaTrader.NinjaScript.Strategies
                 
                 if (ourPositionState == MarketPosition.Long)
                 {
-                    // Update running high price for long positions
-                    if (runningHighPrice == 0 || currentPrice > runningHighPrice)
-                        runningHighPrice = currentPrice;
-                    
-                    // Update running low price for adverse excursion tracking
-                    if (runningLowPrice == 0 || currentPrice < runningLowPrice)
                         runningLowPrice = currentPrice;
                     
                     // Calculate MFE (best price reached - entry price)
@@ -790,59 +817,11 @@ namespace NinjaTrader.NinjaScript.Strategies
                 Print($"Error in ProcessExistingPositions: {ex.Message}");
             }
         }
-        
-        private void UpdateTimeFilterDisplay(string statusText, bool tradingAllowed)
-        {
-            try
-            {
-                Brush statusColor = tradingAllowed ? Brushes.LimeGreen : Brushes.Orange;
-                
-                // Remove old time filter text and draw new one
-                RemoveDrawObject(timeFilterTextName);
-                Draw.TextFixed(this, timeFilterTextName, "\n\n\n\n      " + statusText, TextPosition.TopLeft, 
-                    statusColor, new SimpleFont("Arial", 11), 
-                    Brushes.Transparent, Brushes.Transparent, 0);
-            }
-            catch (Exception ex)
-            {
-                Print($"Error in UpdateTimeFilterDisplay: {ex.Message}");
-            }
-        }
-        
-        private void UpdateTradingDirectionDisplay()
-        {
-            try
-            {
-                string directionText = "";
-                Brush directionColor = Brushes.Cyan;
-                
-                switch (Direction)
-                {
-                    case TradingDirection.Both:
-                        directionText = "TRADING DIRECTION: LONG & SHORT ENABLED";
-                        directionColor = Brushes.Cyan;
-                        break;
-                    case TradingDirection.LongOnly:
-                        directionText = "TRADING DIRECTION: LONG ONLY";
-                        directionColor = Brushes.LimeGreen;
-                        break;
-                    case TradingDirection.ShortOnly:
-                        directionText = "TRADING DIRECTION: SHORT ONLY";
-                        directionColor = Brushes.Orange;
-                        break;
-                }
-                
-                // Remove old direction text and draw new one
-                RemoveDrawObject(directionTextName);
-                Draw.TextFixed(this, directionTextName, "\n\n\n\n\n      " + directionText, TextPosition.TopLeft, 
-                    directionColor, new SimpleFont("Arial", 11), 
-                    Brushes.Transparent, Brushes.Transparent, 0);
-            }
-            catch (Exception ex)
-            {
-                Print($"Error in UpdateTradingDirectionDisplay: {ex.Message}");
-            }
-        }
+    // ...existing code...
+
+        // Add these fields to track last trailing stop update price
+        private double lastTrailingUpdatePriceLong = 0; // Last price at which long trailing stop was updated
+        private double lastTrailingUpdatePriceShort = 0; // Last price at which short trailing stop was updated
         
         protected override void OnPositionUpdate(Cbi.Position position, double averagePrice, int quantity, Cbi.MarketPosition marketPosition)
         {
@@ -870,6 +849,8 @@ namespace NinjaTrader.NinjaScript.Strategies
             if (marketPosition == MarketPosition.Flat)
             {
                 RemoveStopLossLine();
+                RemoveDrawObject("BreakEvenTriggerLong");
+                RemoveDrawObject("BreakEvenTriggerShort");
                 trailingActivated = false;
                 breakevenActivated = false;
                 
@@ -1096,24 +1077,17 @@ namespace NinjaTrader.NinjaScript.Strategies
             try
             {
                 RemoveDrawObject(stopLossLineName);
-                
-                // Check if the stop loss level has changed (moved)
-                bool stopMoved = Math.Abs(price - lastStopLossLevel) > (TickSize / 2); // More than half a tick
-                
-                if (stopMoved && lastStopLossLevel != 0) // Don't animate on first draw
+                // For long trades, if stop loss is above entry price, use green; for shorts, if below entry price, use red; otherwise, grey
+                Brush lineColor = Brushes.Gray;
+                if (ourPositionState == MarketPosition.Long && entryPrice > 0 && price > entryPrice)
                 {
-                    // Rotate to next color when stop moves
-                    colorIndex = (colorIndex + 1) % trailingStopColors.Length;
-                    Print($"Trailing stop moved from {lastStopLossLevel:F2} to {price:F2} - Color: {colorIndex}");
+                    lineColor = Brushes.LimeGreen;
                 }
-                
-                // Use current color from rotation array
-                Brush currentColor = trailingStopColors[colorIndex];
-                
-                // Draw the line with current color
-                Draw.HorizontalLine(this, stopLossLineName, price, currentColor, DashStyleHelper.Solid, LineThickness);
-                
-                // Update last level for next comparison
+                else if (ourPositionState == MarketPosition.Short && entryPrice > 0 && price < entryPrice)
+                {
+                    lineColor = Brushes.DarkGreen;
+                }
+                Draw.HorizontalLine(this, stopLossLineName, price, lineColor, DashStyleHelper.Dot, 5);
                 lastStopLossLevel = price;
             }
             catch (Exception ex)
@@ -1131,11 +1105,19 @@ namespace NinjaTrader.NinjaScript.Strategies
         {
             try
             {
-                // Update detailed dashboard display (now includes all info)
-                UpdateDashboardDisplay();
-                
-                // Update P&L history dashboard
-                UpdatePnLHistoryDisplay();
+                if (ShowDashboards)
+                {
+                    // Update detailed dashboard display (now includes all info)
+                    UpdateDashboardDisplay();
+                    // Update P&L history dashboard
+                    UpdatePnLHistoryDisplay();
+                }
+                else
+                {
+                    // Remove dashboards if not showing
+                    RemoveDrawObject(dashboardTextName);
+                    RemoveDrawObject(pnlHistoryTextName);
+                }
             }
             catch (Exception ex)
             {
@@ -1217,13 +1199,13 @@ namespace NinjaTrader.NinjaScript.Strategies
                 string directionStatus = "";
                 switch (Direction)
                 {
-                    case TradingDirection.Both:
+                    case TradingDirection1234.Both:
                         directionStatus = "LONG & SHORT";
                         break;
-                    case TradingDirection.LongOnly:
+                    case TradingDirection1234.LongOnly:
                         directionStatus = "LONG ONLY";
                         break;
-                    case TradingDirection.ShortOnly:
+                    case TradingDirection1234.ShortOnly:
                         directionStatus = "SHORT ONLY";
                         break;
                 }
@@ -1385,6 +1367,31 @@ namespace NinjaTrader.NinjaScript.Strategies
                     pnlHistoryText += $"\nWaiting for first trade...";
                 }
                 
+                // Add trailing stop characteristics to the dashboard
+                pnlHistoryText += $"\n=== TRAILING STOP SETTINGS ===";
+        //        pnlHistoryText += $"\nTrailing Stop Points: {TrailingStopPoints}";
+
+
+
+
+                double atrValueDashboard = atr != null ? atr[0] : 0.0;
+                double atrDistanceDashboard = Math.Min(AtrMultiplier * atrValueDashboard / TickSize, MaxAtrDistance);
+
+                if (atrDistanceDashboard < TrailingStopPoints)
+                    pnlHistoryText += $"\nATR Distance: {atrDistanceDashboard:F2} ->replaced by FIXED TS"; // Show in parentheses if smaller
+                else
+                    pnlHistoryText += $"\nATR Distance: {atrDistanceDashboard:F2} ATR ACTIVATED";
+
+                if (atrDistanceDashboard < TrailingStopPoints)
+                                    pnlHistoryText += $"\nTrailing Stop Points: {TrailingStopPoints} ACTIVATED";
+                else
+                    pnlHistoryText += $"\nTrailing Stop Points: {TrailingStopPoints:F2} -> replaced by ATR";
+
+
+
+                pnlHistoryText += $"\nATR Multiplier: {AtrMultiplier}";
+                pnlHistoryText += $"\nProfit Trigger Points: {ProfitTriggerPoints}";
+                pnlHistoryText += $"\nProgressive Tightening Rate: {ProgressiveTighteningRate}";
                 // Remove old P&L history dashboard and draw new one at bottom right
                 RemoveDrawObject(pnlHistoryTextName);
                 Draw.TextFixed(this, pnlHistoryTextName, pnlHistoryText, TextPosition.BottomRight, 
@@ -1421,6 +1428,16 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         #region Properties
+
+        // User option to display dashboards
+        private bool showDashboards = true;
+        [NinjaScriptProperty]
+        [Display(Name = "Show Dashboards", Description = "Display the dashboard and P&L history panels", Order = 14, GroupName = "Display")]
+        public bool ShowDashboards
+        {
+            get { return showDashboards; }
+            set { showDashboards = value; }
+        }
         
         [NinjaScriptProperty]
         [Range(1, int.MaxValue)]
@@ -1434,7 +1451,7 @@ namespace NinjaTrader.NinjaScript.Strategies
         
         [NinjaScriptProperty]
         [Range(1, int.MaxValue)]
-        [Display(Name = "Trailing Stop Points", Description = "Base points for trailing stop (will be adjusted by ATR and profit)", Order = 3, GroupName = "Parameters")]
+        [Display(Name = "Initial SL Points", Description = "Base points for trailing stop (will be adjusted by ATR and profit)", Order = 3, GroupName = "Parameters")]
         public int TrailingStopPoints { get; set; }
         
         [NinjaScriptProperty]
@@ -1444,12 +1461,12 @@ namespace NinjaTrader.NinjaScript.Strategies
         
         [NinjaScriptProperty]
         [Range(1, 50)]
-        [Display(Name = "Profit Trigger Points", Description = "Points of profit needed to activate breakeven protection", Order = 5, GroupName = "Parameters")]
+        [Display(Name = "BE Trigger Points", Description = "Points of profit needed to activate breakeven protection", Order = 5, GroupName = "Parameters")]
         public int ProfitTriggerPoints { get; set; }
         
         [NinjaScriptProperty]
         [Range(0.05, 0.5)]
-        [Display(Name = "Progressive Tightening Rate", Description = "Rate at which trailing stop tightens as profit increases (0.1 = 10% tighter per profit level)", Order = 6, GroupName = "Parameters")]
+        [Display(Name = "Trailing SL Tightening Rate", Description = "Rate at which trailing stop tightens as profit increases (0.1 = 10% tighter per profit level)", Order = 6, GroupName = "Parameters")]
         public double ProgressiveTighteningRate { get; set; }
         
         [NinjaScriptProperty]
@@ -1459,7 +1476,7 @@ namespace NinjaTrader.NinjaScript.Strategies
         
         [NinjaScriptProperty]
         [Display(Name = "Trading Direction", Description = "Select trading direction: Both, Long Only, or Short Only", Order = 8, GroupName = "Parameters")]
-        public TradingDirection Direction { get; set; }
+        public TradingDirection1234 Direction { get; set; }
         
         [NinjaScriptProperty]
         [Display(Name = "Use Time Filter", Description = "Enable/disable time filter", Order = 9, GroupName = "Parameters")]
@@ -1492,6 +1509,11 @@ namespace NinjaTrader.NinjaScript.Strategies
         [Display(Name = "Line Thickness", Description = "Thickness of the stop loss line", Order = 13, GroupName = "Display")]
         public int LineThickness { get; set; }
         
+        [NinjaScriptProperty]
+        [Range(1, double.MaxValue)]
+        [Display(Name = "Max ATR SL accepted", Description = "Maximum ATR-based trailing stop distance (in points)", Order = 15, GroupName = "Parameters")]
+        public double MaxAtrDistance { get; set; } = 0; // User-defined cap for ATR-based trailing stop distance
+        
         #endregion
         
         // Add this method after the existing methods (around line 1000):
@@ -1508,7 +1530,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     Directory.CreateDirectory(ninjaTraderFolder);
                 
                 // Create filename with strategy name and timestamp
-                string fileName = $"StratEMATrailV02_Trades_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string fileName = $"StratEMATrailV03_Trades_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
                 csvFilePath = Path.Combine(ninjaTraderFolder, fileName);
                 
                 // Write CSV header
@@ -1535,7 +1557,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                                       "FastEMAEntry,SlowEMAEntry,FastEMAExit,SlowEMAExit,ATREntry,ATRExit," +
                                       "InitialStopDistance,FinalStopDistance,MaxFavorableExcursion,MaxAdverseExcursion," +
                                       "BreakevenActivated,TrailingActivated,ProfitAtExit,SessionPnL," +
-                                      "TradingDirection,TimeFilterEnabled,StartTime,EndTime," +
+                                      "TradingDirection1234,TimeFilterEnabled,StartTime,EndTime," +
                                       "EmaPeriod1,EmaPeriod2,TrailingStopPoints,AtrMultiplier,ProfitTriggerPoints," +
                                       "ProgressiveTighteningRate,WinStreak,LossStreak,CumulativeTrades";
                         
@@ -1630,7 +1652,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                                   $"{trailingActivated}," +                             // TrailingActivated
                                   $"{pointsPnL:F2}," +                                  // ProfitAtExit
                                   $"{totalPnL + dollarPnL:F2}," +                       // SessionPnL (projected)
-                                  $"{Direction}," +                                      // TradingDirection
+                                  $"{Direction}," +                                      // TradingDirection1234
                                   $"{UseTimeFilter}," +                                 // TimeFilterEnabled
                                   $"{StartTime:HH:mm}," +                               // StartTime
                                   $"{EndTime:HH:mm}," +                                 // EndTime
@@ -1712,7 +1734,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                 
                 string summaryContent = "STRATEGY PERFORMANCE SUMMARY" + Environment.NewLine +
                                       "============================" + Environment.NewLine +
-                                      $"Strategy Name: StratEMATrailV02" + Environment.NewLine +
+                                      $"Strategy Name: StratEMATrailV03" + Environment.NewLine +
                                       $"Session Date: {DateTime.Now:yyyy-MM-dd}" + Environment.NewLine +
                                       $"Session Start: {sessionStartTime:yyyy-MM-dd HH:mm:ss}" + Environment.NewLine +
                                       $"Session End: {DateTime.Now:yyyy-MM-dd HH:mm:ss}" + Environment.NewLine +
@@ -1746,32 +1768,38 @@ namespace NinjaTrader.NinjaScript.Strategies
                                       $"Max Drawdown: {maxDrawdown:C2}" + Environment.NewLine +
                                       $"Max Consecutive Wins: {maxConsecutiveWins}" + Environment.NewLine +
                                       $"Max Consecutive Losses: {maxConsecutiveLosses}" + Environment.NewLine +
-                                      Environment.NewLine +
-                                      "TRADE DURATION ANALYSIS" + Environment.NewLine +
-                                      "=======================" + Environment.NewLine +
-                                      $"Average Duration: {avgDurationText}" + Environment.NewLine +
-                                      $"Shortest Trade: {minDurationText}" + Environment.NewLine +
-                                      $"Longest Trade: {maxDurationText}" + Environment.NewLine +
-                                      Environment.NewLine +
-                                      "LONG TRADES BREAKDOWN" + Environment.NewLine +
-                                      "=====================" + Environment.NewLine +
-                                      $"Long Trades: {longTrades}" + Environment.NewLine +
-                                      $"Long Wins: {longWins}" + Environment.NewLine +
-                                      $"Long Losses: {longLosses}" + Environment.NewLine +
-                                      $"Long Win Rate: {longWinRate:F1}%" + Environment.NewLine +
-                                      $"Long P&L: {longPnL:C2}" + Environment.NewLine +
-                                      $"Best Long Trade: {largestWinLong:C2}" + Environment.NewLine +
-                                      $"Worst Long Trade: {largestLossLong:C2}" + Environment.NewLine +
-                                      Environment.NewLine +
-                                      "SHORT TRADES BREAKDOWN" + Environment.NewLine +
-                                      "======================" + Environment.NewLine +
-                                      $"Short Trades: {shortTrades}" + Environment.NewLine +
-                                      $"Short Wins: {shortWins}" + Environment.NewLine +
-                                      $"Short Losses: {shortLosses}" + Environment.NewLine +
-                                      $"Short Win Rate: {shortWinRate:F1}%" + Environment.NewLine +
-                                      $"Short P&L: {shortPnL:C2}" + Environment.NewLine +
-                                      $"Best Short Trade: {largestWinShort:C2}" + Environment.NewLine +
-                                      $"Worst Short Trade: {largestLossShort:C2}";
+                                      $"Current Streak: ";
+                if (consecutiveWins > 0) summaryContent += $"{consecutiveWins} wins";
+                else if (consecutiveLosses > 0) summaryContent += $"{consecutiveLosses} losses";
+                else summaryContent += "0";
+                
+                // Add duration statistics to summary
+                summaryContent += Environment.NewLine + Environment.NewLine +
+                                  "TRADE DURATION ANALYSIS" + Environment.NewLine +
+                                  "=======================" + Environment.NewLine +
+                                  $"Average Duration: {avgDurationText}" + Environment.NewLine +
+                                  $"Shortest Trade: {minDurationText}" + Environment.NewLine +
+                                  $"Longest Trade: {maxDurationText}" + Environment.NewLine +
+                                  Environment.NewLine +
+                                  "LONG TRADES BREAKDOWN" + Environment.NewLine +
+                                  "=====================" + Environment.NewLine +
+                                  $"Long Trades: {longTrades}" + Environment.NewLine +
+                                  $"Long Wins: {longWins}" + Environment.NewLine +
+                                  $"Long Losses: {longLosses}" + Environment.NewLine +
+                                  $"Long Win Rate: {longWinRate:F1}%" + Environment.NewLine +
+                                  $"Long P&L: {longPnL:C2}" + Environment.NewLine +
+                                  $"Best Long Trade: {largestWinLong:C2}" + Environment.NewLine +
+                                  $"Worst Long Trade: {largestLossLong:C2}" + Environment.NewLine +
+                                  Environment.NewLine +
+                                  "SHORT TRADES BREAKDOWN" + Environment.NewLine +
+                                  "======================" + Environment.NewLine +
+                                  $"Short Trades: {shortTrades}" + Environment.NewLine +
+                                  $"Short Wins: {shortWins}" + Environment.NewLine +
+                                  $"Short Losses: {shortLosses}" + Environment.NewLine +
+                                  $"Short Win Rate: {shortWinRate:F1}%" + Environment.NewLine +
+                                  $"Short P&L: {shortPnL:C2}" + Environment.NewLine +
+                                  $"Best Short Trade: {largestWinShort:C2}" + Environment.NewLine +
+                                  $"Worst Short Trade: {largestLossShort:C2}";
         
         File.WriteAllText(summaryPath, summaryContent);
         Print($"Trade summary created: {Path.GetFileName(summaryPath)}");
@@ -1780,10 +1808,9 @@ namespace NinjaTrader.NinjaScript.Strategies
     {
         Print($"Error creating trade summary: {ex.Message}");
     }
-}
     }
 }
-
+}
 #region NinjaScript generated code. Neither change nor remove.
 // This code will be generated automatically by NinjaTrader during compilation
 #endregion
